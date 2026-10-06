@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeamHub</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#f6f2ff;--card:#fff;--ink:#2b2745;--mut:#7b7798;--line:#e8e2fb;--pri:#6c5ce7;--soft:#ece9ff;--ok:#00b894}
+@media(prefers-color-scheme:dark){:root{--bg:#171530;--card:#231f42;--ink:#f1efff;--mut:#a9a5cc;--line:#37325f;--soft:#312c5a}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:500 15px/1.5 Nunito,"Segoe UI",system-ui,sans-serif}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+aside{background:var(--card);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+.logo{font-weight:800;font-size:22px;padding:0 10px 16px;color:var(--pri)}
+nav button{display:flex;gap:10px;width:100%;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:10px 12px;border-radius:14px;cursor:pointer;margin-bottom:2px;text-align:left}
+nav button:hover{background:var(--soft)}nav button.on{background:var(--pri);color:#fff}
+main{padding:24px 32px 60px;max-width:980px;width:100%}
+h1{font-size:28px;margin:0 0 2px;font-weight:800}h2{font-size:18px;margin:24px 0 10px;font-weight:800}
+.mut{color:var(--mut)}
+.bar{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-bottom:14px}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:8px 12px}
+textarea{width:100%;min-height:90px}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:3px solid var(--pri);outline-offset:1px}
+.btn{background:var(--pri);color:#fff;border:0;border-radius:12px;padding:9px 16px;font:inherit;font-weight:800;cursor:pointer}
+.btn.ghost{background:var(--soft);color:var(--pri)}.btn.sm{padding:5px 11px;font-size:13px}.btn:disabled{opacity:.5;cursor:default}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+.stat{border-radius:20px;padding:18px;color:#fff}.stat b{display:block;font-size:32px;line-height:1.1}
+.s1{background:#6c5ce7}.s2{background:#ff7675}.s3{background:#00a38a}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.grow{flex:1;min-width:160px}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;flex:none}
+.pill{border-radius:99px;padding:2px 10px;font-size:13px;font-weight:700;background:var(--soft);color:var(--pri)}
+.pill.bad{background:#ffe3e3;color:#c0392b}.pill.ok{background:#d4f5ec;color:#00775f}
+.chk{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:var(--card);color:transparent;font-size:18px;font-weight:800;cursor:pointer;flex:none}
+.chk.on{background:var(--ok);border-color:var(--ok);color:#fff}.chk:disabled{cursor:default;opacity:.6}
+.sop{margin-top:10px;padding:12px;border-radius:14px;background:var(--soft);white-space:pre-wrap}
+.lnk{background:none;border:0;padding:0;color:var(--pri);font:inherit;font-weight:800;cursor:pointer;text-decoration:underline}
+.form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tab{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:6px 14px;font:inherit;font-weight:700;cursor:pointer}
+.tab.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.sw{border:0;border-radius:99px;padding:5px 12px;font:inherit;font-weight:700;cursor:pointer;background:var(--soft);color:var(--mut)}.sw.on{background:var(--ok);color:#fff}.sw.up{background:var(--pri);color:#fff}
+.chat{height:340px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin-bottom:10px}
+.msg{max-width:72%;padding:8px 14px;border-radius:18px;background:var(--soft);overflow-wrap:anywhere}.msg.me{align-self:flex-end;background:var(--pri);color:#fff}
+.login{max-width:420px;margin:12vh auto;padding:0 16px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s}#toast.on{opacity:1}
+@media(max-width:760px){.app{grid-template-columns:1fr}aside{position:static;height:auto;border:0}nav{display:flex;overflow-x:auto;gap:4px}nav button{width:auto;white-space:nowrap}main{padding:16px}.stats{grid-template-columns:1fr}}
+</style></head><body>
+<div id="root"></div><div id="toast"></div>
+<script>
+// ---- 1. Paste your own values here (Supabase: Project Settings -> API) ----
+const CFG={url:'https://oxykernvaykqldexgbwh.supabase.co',key:'sb_publishable_G6pErGeMKt_lzbP-i2919Q_RfZhunWH',bot:'YOUR_TELEGRAM_BOT_USERNAME'};
+// ---------------------------------------------------------------------------
+const ready=!CFG.url.startsWith('PASTE');
+const sb=ready?supabase.createClient(CFG.url,CFG.key):null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>{const t=$('#toast');t.textContent=m;t.className='on';setTimeout(()=>t.className='',2600)};
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const day=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
+const WD=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],tw=(new Date().getDay()+6)%7+1;
+const COL=['#6c5ce7','#ff7675','#0984e3','#00a38a','#e17055','#e84393'];
+const S={me:null,P:[],D:[],C:new Set(),R:{},perm:{},PM:[],F:[],FA:[],FL:[],fo:null,MG:[],LG:[],AL:[],cw:null,ch:null,view:'home',ep:null,ef:'now',open:null,act:[],sent:false};
+const isM=()=>S.me&&S.me.role==='manager';
+const mem=()=>S.P.filter(p=>p.role==='member'&&p.is_active);
+const usr=id=>S.P.find(p=>p.id===id)||{id,full_name:'Unknown'};
+const nm=p=>p.full_name||p.email||'Member';
+const canTeam=()=>isM()||!!S.perm.can_view_team_workload;
+// Folder access level for a person: 0 none, 1 can view, 2 can upload (managers always 2)
+const lvl=(f,u)=>{if(usr(u).role==='manager')return 2;const fa=S.FA.find(x=>x.folder_id===f.id&&x.user_id===u);return Math.max(f.visible_to_all?1:0,fa?(fa.can_upload?2:fa.can_view?1:0):0)};
+const conv=w=>S.MG.filter(m=>m.member_id===w).sort((a,b)=>a.created_at<b.created_at?-1:1);
+const unread=w=>S.MG.filter(m=>(!w||m.member_id===w)&&m.sender_id!==S.me.id&&!m.read_at).length;
+const actTxt=a=>(({INSERT:'added',UPDATE:'updated',DELETE:'removed'})[a.action]||a.action)+' '+(({tasks:'a task',duties:'a duty',duty_completions:'a completion',files:'a file',work_logs:'a work log entry'})[a.entity]||esc(a.entity))+(a.details&&(a.details.title||a.details.name||a.details.summary)?': '+esc(a.details.title||a.details.name||a.details.summary):'');
+const by=id=>{const p=S.P.find(x=>x.id===id);return p?nm(p):'a teammate'};
+const fmtSize=b=>b==null?'':b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+const av=p=>`<div class="av" style="background:${COL[[...p.id].reduce((a,c)=>a+c.charCodeAt(0),0)%COL.length]}">${esc(nm(p)[0].toUpperCase())}</div>`;
+async function go(fn,ok){try{const r=await fn();if(r&&r.error){toast(r.error.message);return null}if(ok)toast(ok);return r||{}}catch(e){console.error(e);toast('Something went wrong. Please try again.');return null}}
+
+// ---- Duty schedule rules (same rules the reminder function uses) ----
+function pk(d){const t=new Date();if(d.frequency==='daily')return day(0);if(d.frequency==='weekly')return day(1-tw);
+if(d.frequency==='monthly')return t.getFullYear()+'-'+t.getMonth();if(d.frequency==='quarterly')return t.getFullYear()+'-Q'+Math.floor(t.getMonth()/3);return'once'}
+function due(d){const t=new Date(),y=t.getFullYear(),m=t.getMonth(),dim=(a,b)=>new Date(a,b+1,0).getDate();
+if(d.frequency==='daily')return day(0);if(d.frequency==='weekly')return day((d.due_weekday||1)-tw);
+if(d.frequency==='monthly')return iso(new Date(y,m,Math.min(d.due_day||1,dim(y,m))));
+if(d.frequency==='quarterly'){const q=Math.floor(m/3)*3+2;return iso(new Date(y,q,Math.min(d.due_day||1,dim(y,q))))}return d.due_date||day(0)}
+const st=d=>S.C.has(d.id+'|'+pk(d))?'done':due(d)===day(0)?'today':due(d)<day(0)?'overdue':'later';
+const SL={done:'Done',today:'Due today',overdue:'Overdue',later:'Upcoming'};
+const lab=d=>({daily:'Every day',weekly:'Every '+WD[(d.due_weekday||1)-1],monthly:'Monthly, day '+d.due_day,quarterly:'Quarterly, day '+d.due_day+' of last month',once:'Once, '+d.due_date}[d.frequency]);
+
+// ---- Loading ----
+async function load(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){S.me=null;return render()}
+  const uid=session.user.id;
+  const r=await Promise.all([sb.from('profiles').select('*'),sb.from('duties').select('*').order('created_at'),sb.from('duty_completions').select('duty_id,period_key'),sb.from('reminder_settings').select('*'),sb.from('permissions').select('*'),sb.from('folders').select('*').order('name'),sb.from('folder_access').select('*'),sb.from('files').select('*').order('created_at',{ascending:false}),sb.from('messages').select('*').order('created_at',{ascending:false}).limit(300),sb.from('work_logs').select('*').order('log_date',{ascending:false}).limit(200)]);
+  const bad=r.find(x=>x.error);if(bad)toast(bad.error.message);
+  S.P=r[0].data||[];S.me=S.P.find(x=>x.id===uid)||null;S.D=r[1].data||[];
+  S.C=new Set((r[2].data||[]).map(x=>x.duty_id+'|'+x.period_key));
+  S.R={};(r[3].data||[]).forEach(x=>S.R[x.user_id]=x);S.PM=r[4].data||[];S.perm=S.PM.find(x=>x.user_id===uid)||{};S.F=r[5].data||[];S.FA=r[6].data||[];S.FL=r[7].data||[];S.MG=r[8].data||[];S.LG=r[9].data||[];
+  if(!S.ch)S.ch=sb.channel('msgs').on('postgres_changes',{event:'*',schema:'public',table:'messages'},onMsg).subscribe();
+  if(S.me&&!S.R[uid]){const n=await sb.from('reminder_settings').upsert({user_id:uid,email:S.me.email},{onConflict:'user_id'}).select().single();if(n.data)S.R[uid]=n.data}
+  render()}
+
+// ---- Views ----
+function duty(d,full){const s=st(d),u=usr(d.owner_id),can=isM()||d.owner_id===S.me.id;let b='';
+if(full){b=`<div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="S.open=S.open==='${d.id}'?null:'${d.id}';render()">${d.sop?'View SOP':'Add SOP'}</button>`+
+(isM()?`<button class="btn ghost sm" onclick="delD('${d.id}')">Delete</button>`:d.owner_id===S.me.id?`<button class="btn ghost sm" ${d.delete_requested?'disabled':''} onclick="reqDel('${d.id}')">${d.delete_requested?'Waiting for manager':'Request delete'}</button>`:'')+`</div>`;
+if(S.open===d.id)b+=can?`<div style="margin-top:10px"><textarea id="sp" placeholder="Write the steps for this duty">${esc(d.sop)}</textarea><button class="btn sm" onclick="saveSop('${d.id}')">Save SOP</button></div>`:`<div class="sop">${esc(d.sop)||'No SOP yet.'}</div>`}
+return `<div class="card"><div class="row"><button class="chk ${s==='done'?'on':''}" ${can?'':'disabled'} onclick="tog('${d.id}')" aria-label="Mark done">✓</button><div class="grow"><b>${esc(d.title)}</b><div class="mut">${isM()?`<button class="lnk" onclick="openEmp('${u.id}')">${esc(nm(u))}</button>, `:''}${lab(d)}${s==='later'||s==='done'?'':', due '+due(d)}</div></div><span class="pill ${s==='overdue'?'bad':s==='done'?'ok':''}">${SL[s]}</span>${d.delete_requested?'<span class="pill bad">Delete requested</span>':''}</div>${b}</div>`}
+const line=d=>`<div class="row" style="margin-top:8px"><span class="pill ${st(d)==='overdue'?'bad':st(d)==='done'?'ok':''}">${SL[st(d)]}</span><span>${esc(d.title)}</span></div>`;
+const none=m=>`<div class="card mut">${m}</div>`;
+const V={
+home(){const m=isM(),l=S.D.filter(d=>m||d.owner_id===S.me.id),n=s=>l.filter(d=>st(d)===s).length,need=l.filter(d=>['overdue','today'].includes(st(d))).sort((a,b)=>due(a)<due(b)?-1:1);
+return `<h1>${m?'Team overview':'Today'}</h1><div class="mut">${m?'Everything that needs attention across the team.':'Here is what you need to do. Tick each one when it is done.'}</div>
+<div class="stats"><div class="stat s1"><b>${n('today')}</b>Due today</div><div class="stat s2"><b>${n('overdue')}</b>Overdue</div><div class="stat s3"><b>${m?S.D.filter(d=>d.delete_requested).length:n('done')}</b>${m?'Delete requests':'Done'}</div></div>
+${m?`<h2>By employee</h2><div class="tabs">${mem().map(u=>`<button class="tab" onclick="openEmp('${u.id}')">${esc(nm(u))}: ${S.D.filter(d=>d.owner_id===u.id&&['today','overdue'].includes(st(d))).length} to do</button>`).join('')||'<span class="mut">No team members yet. Invite them from Supabase, Authentication, Users.</span>'}</div>`:''}
+<h2>${m?'Needs attention':'Your list'}</h2>${need.map(d=>duty(d)).join('')||none('Nothing due. Enjoy the quiet.')}`},
+duties(){const l=S.D.filter(d=>isM()||d.owner_id===S.me.id),rq=isM()?S.D.filter(d=>d.delete_requested):[];
+return `<h1>Job duties</h1><div class="mut">${isM()?'Create duties and decide on delete requests.':'Add an SOP to each duty so anyone can follow it.'}</div><br>
+${rq.map(d=>`<div class="card row"><span class="grow"><b>${esc(nm(usr(d.owner_id)))}</b> asks to delete "${esc(d.title)}"</span><button class="btn sm" onclick="delD('${d.id}')">Approve</button><button class="btn ghost sm" onclick="keep('${d.id}')">Keep it</button></div>`).join('')}
+${isM()?`<div class="form card"><input id="dt" class="grow" placeholder="Name of the duty"><select id="da">${mem().map(u=>`<option value="${u.id}">${esc(nm(u))}</option>`).join('')}</select><select id="df" onchange="fq()"><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="quarterly">Every quarter</option><option value="once">Specific date</option></select><select id="dw" hidden>${WD.map((w,i)=>`<option value="${i+1}">${w}</option>`).join('')}</select><input id="dm" type="number" min="1" max="28" value="1" style="width:80px" hidden title="Day of month"><input id="dd" type="date" value="${day(7)}" hidden><button class="btn" onclick="addD()">Add duty</button></div>`:''}
+${l.map(d=>duty(d,1)).join('')||none('No duties yet.')}`},
+today(){return `<h1>Team today</h1><div class="mut">Each person's duties for today, plus anything not completed.</div><br>`+(mem().map(u=>{const l=S.D.filter(d=>d.owner_id===u.id),c=s=>l.filter(d=>st(d)===s).length;
+return `<div class="card"><div class="row">${av(u)}<div class="grow">${isM()?`<button class="lnk" onclick="openEmp('${u.id}')">${esc(nm(u))}</button>`:`<b>${esc(nm(u))}</b>`}<div class="mut">${esc(u.job_title||'')}</div></div><span class="pill">${c('today')} due today</span><span class="pill ${c('overdue')?'bad':''}">${c('overdue')} overdue</span><span class="pill ok">${c('done')} done</span></div>${l.filter(d=>st(d)!=='later').map(line).join('')}</div>`}).join('')||none('No team members yet.'))},
+emp(){const u=usr(S.ep),l=S.D.filter(d=>d.owner_id===u.id),c=s=>l.filter(d=>st(d)===s).length,r=S.R[u.id]||{},
+TB={now:'Needs attention',later:'Upcoming',done:'Done',all:'All duties'},
+FT={now:d=>['today','overdue'].includes(st(d)),later:d=>st(d)==='later',done:d=>st(d)==='done',all:()=>true};
+return `<button class="btn ghost sm" onclick="S.view='today';render()">Back to Team today</button><br><br>
+<div class="row">${av(u)}<div class="grow"><h1>${esc(nm(u))}</h1><div class="mut">${esc(u.job_title||'Team member')}, ${esc(u.email||'')}</div></div></div>
+<div class="stats"><div class="stat s1"><b>${c('today')}</b>Due today</div><div class="stat s2"><b>${c('overdue')}</b>Overdue</div><div class="stat s3"><b>${c('done')}</b>Done</div></div>
+<h2>Duties</h2><div class="tabs">${Object.keys(TB).map(k=>`<button class="tab ${k===S.ef?'on':''}" onclick="S.ef='${k}';render()">${TB[k]}</button>`).join('')}</div>
+${l.filter(FT[S.ef]).map(d=>duty(d,1)).join('')||none('Nothing here.')}
+<h2>Recent work log</h2>${S.LG.filter(x=>x.user_id===u.id).slice(0,5).map(x=>`<div class="card row"><div class="grow"><b>${esc(x.summary)}</b><div class="mut">${x.log_date}</div></div><span class="pill">${Number(x.hours)}h</span></div>`).join('')||none('Nothing logged yet.')}
+<h2>Recent activity</h2>${S.act.map(a=>`<div class="card row"><span class="pill">${new Date(a.created_at).toLocaleString()}</span><span class="grow">${({INSERT:'Added',UPDATE:'Updated',DELETE:'Removed'})[a.action]||a.action} ${a.entity==='duty_completions'?'a completion':esc(a.entity)}${a.details&&a.details.title?': '+esc(a.details.title):''}</span></div>`).join('')||none('No activity yet.')}
+<h2>Reminders</h2><div class="card">Email ${r.via_email?'on':'off'}, Telegram ${r.via_telegram?'on':'off'}, sent daily at ${esc(String(r.send_time||'08:30').slice(0,5))}.</div>`},
+chat(){if(!isM()&&!S.perm.can_chat)return `<h1>Chat</h1>`+none('Chat is switched off for you. Ask your manager to turn it on.');
+const w=isM()?(S.cw=mem().find(u=>u.id===S.cw)?S.cw:(mem()[0]||{}).id):S.me.id;if(!w)return `<h1>Chat</h1>`+none('No team members yet.');
+return `<h1>Chat</h1><div class="mut">${isM()?'Talk with your team one by one.':'A private line to your manager.'}</div><br>
+${isM()?`<div class="tabs">${mem().map(u=>`<button class="tab ${u.id===w?'on':''}" onclick="S.cw='${u.id}';render()">${esc(nm(u))}${unread(u.id)?' ('+unread(u.id)+')':''}</button>`).join('')}</div>`:''}
+<div class="chat" id="cb">${conv(w).map(m=>`<div class="msg ${m.sender_id===S.me.id?'me':''}">${esc(m.body)}</div>`).join('')||'<span class="mut">No messages yet. Say hello.</span>'}</div>
+<div class="form"><input id="cx" class="grow" placeholder="Write a message" onkeydown="if(event.key==='Enter')send()"><button class="btn" onclick="send()">Send</button></div>`},
+log(){const m=isM(),l=S.LG.filter(x=>m||x.user_id===S.me.id),wk=l.filter(x=>x.log_date>=day(-6)).reduce((a,x)=>a+Number(x.hours),0);
+return `<h1>Work log</h1><div class="mut">A quick note on what you did and for how long.</div><br>
+<div class="form card"><input id="ld" type="date" value="${day(0)}"><input id="lh" type="number" min="0.5" max="24" step="0.5" value="2" style="width:90px" title="Hours"><input id="lx" class="grow" placeholder="What did you work on?"><button class="btn" onclick="addLog()">Add to log</button></div>
+<div class="mut">Last 7 days: ${wk}h${m?' across the team':''}</div><br>
+${l.map(x=>`<div class="card row">${av(usr(x.user_id))}<div class="grow"><b>${esc(x.summary)}</b><div class="mut">${m?esc(by(x.user_id))+', ':''}${x.log_date}</div></div><span class="pill">${Number(x.hours)}h</span>${x.user_id===S.me.id||m?`<button class="btn ghost sm" onclick="delLog('${x.id}')">Delete</button>`:''}</div>`).join('')||none('Nothing logged yet.')}`},
+activity(){return `<h1>Activity</h1><div class="mut">Who did what, and when. Latest 100 entries.</div><br>${S.AL.map(a=>`<div class="card row"><span class="pill">${new Date(a.created_at).toLocaleString()}</span><span class="grow"><b>${esc(by(a.user_id))}</b> ${actTxt(a)}</span></div>`).join('')||none('No activity yet.')}`},
+library(){const fs=S.F;if(!fs.find(f=>f.id===S.fo))S.fo=fs[0]?fs[0].id:null;const f=fs.find(x=>x.id===S.fo),l=S.FL.filter(x=>x.folder_id===S.fo);
+return `<h1>Library</h1><div class="mut">Shared files, organized by folder.</div><br>
+<div class="tabs">${fs.map(x=>`<button class="tab ${x.id===S.fo?'on':''}" onclick="S.fo='${x.id}';render()">${esc(x.name)}</button>`).join('')}</div>
+${isM()?`<div class="form"><input id="fn" placeholder="New folder name"><label><input id="fv" type="checkbox"> Everyone can view</label><button class="btn ghost sm" onclick="addF()">Create folder</button></div>`:''}
+${!f?none(isM()?'Create your first folder above.':'No folders have been shared with you yet.'):`${isM()?`<div class="row"><button class="sw ${f.visible_to_all?'on':''}" onclick="visF('${f.id}',${!f.visible_to_all})">Everyone can view this folder</button></div><br>`:''}
+${lvl(f,S.me.id)>1?`<div class="form card"><input id="up" type="file" class="grow"><button class="btn" onclick="upl()">Upload</button></div>`:''}
+${l.map(x=>`<div class="card row"><div style="font-size:26px">📄</div><div class="grow"><b>${esc(x.name)}</b><div class="mut">${fmtSize(x.size_bytes)}, added by ${esc(by(x.uploaded_by))} on ${new Date(x.created_at).toLocaleDateString()}</div></div><button class="btn ghost sm" onclick="dl('${x.id}')">Download</button>${isM()||(x.uploaded_by===S.me.id&&S.perm.can_delete_own_files)?`<button class="btn ghost sm" onclick="delFile('${x.id}')">Delete</button>`:''}</div>`).join('')||none('This folder is empty.')}`}`},
+access(){const PL=[['can_view_team_workload','See team duties',"Can open Team today and see everyone's duties."],['can_chat','Chat with manager','Takes effect when chat is added.'],['can_delete_own_files','Delete own files','Can delete files they uploaded to the library.']];
+return `<h1>Access</h1><div class="mut">Switch things on or off for each person. Changes apply the next time they open the app.</div><br>`+(mem().map(u=>{const p=S.PM.find(x=>x.user_id===u.id)||{};
+return `<div class="card"><div class="row">${av(u)}<b class="grow">${esc(nm(u))}</b></div><div class="row" style="margin-top:10px">${PL.map(x=>`<button class="sw ${p[x[0]]?'on':''}" title="${esc(x[2])}" onclick="setP('${u.id}','${x[0]}',${!p[x[0]]})">${x[1]}</button>`).join('')}</div>${S.F.length?`<div class="row" style="margin-top:8px">${S.F.map(f=>{const v=lvl(f,u.id);return `<button class="sw ${v==2?'up':v?'on':''}" onclick="setF('${f.id}','${u.id}')">${esc(f.name)}: ${['no access','view','upload'][v]}</button>`}).join('')}</div>`:''}</div>`}).join('')||none('No team members yet.'))+`<div class="card mut">${PL.map(x=>x[1]+': '+esc(x[2])).join(' ')}</div>`},
+rem(){const r=S.R[S.me.id]||{};return `<h1>Reminders</h1><div class="mut">Get a nudge about today's duties, by email or Telegram.</div><br><div class="card">
+<div class="form"><label>Email<br><input id="re" value="${esc(r.email)}" style="width:240px"></label><label>Send at<br><input id="rt" type="time" value="${esc(String(r.send_time||'08:30').slice(0,5))}"></label></div>
+<div class="row"><button class="sw ${r.via_email?'on':''}" onclick="setR({via_email:${!r.via_email}})">Email</button>
+${r.telegram_chat_id?`<button class="sw ${r.via_telegram?'on':''}" onclick="setR({via_telegram:${!r.via_telegram}})">Telegram ${r.via_telegram?'on':'paused'}</button>`:`<button class="sw" onclick="tgConnect()">Connect Telegram</button>`}
+<button class="sw ${r.include_overdue?'on':''}" onclick="setR({include_overdue:${!r.include_overdue}})">Include overdue duties</button></div><br>
+<button class="btn" onclick="setR({},'Reminder settings saved')">Save settings</button></div>
+<div class="card mut">Connect Telegram opens our bot. Press Start there, then come back to this page and it will show as connected.</div>`}};
+function render(){const R=$('#root');
+if(!ready){R.innerHTML=`<div class="login card"><h1>Almost there</h1><p>Open this file and paste your Supabase URL and public key at the top of the script.</p></div>`;return}
+if(!S.me){R.innerHTML=`<div class="login"><h1>TeamHub</h1><p class="mut">Enter your work email and we will send you a sign-in link. No password to remember.</p>
+<div class="card">${S.sent?'<b>Check your email.</b> Open the link we sent to finish signing in.':`<div class="form"><input id="le" type="email" class="grow" placeholder="you@company.com" onkeydown="if(event.key==='Enter')signIn()"><button class="btn" onclick="signIn()">Email me a link</button></div>`}</div></div>`;return}
+const n=[['home','🏠',isM()?'Overview':'Today'],['duties','✅','Job duties']];if(canTeam())n.push(['today','👥','Team today']);n.push(['log','📝','Work log'],['library','📁','Library'],['chat','💬','Chat'+(unread()?' ('+unread()+')':'')],['rem','🔔','Reminders']);if(isM())n.push(['access','🔑','Access'],['activity','🕒','Activity']);
+if(S.view==='emp'&&!isM())S.view='home';if(!n.some(x=>x[0]===S.view)&&S.view!=='emp')S.view='home';
+R.innerHTML=`<div class="app"><aside><div class="logo">TeamHub</div><nav>${n.map(x=>`<button class="${x[0]===S.view||(S.view==='emp'&&x[0]==='today')?'on':''}" onclick="nav('${x[0]}')">${x[1]} ${x[2]}</button>`).join('')}</nav></aside>
+<main><div class="bar"><span class="mut">${esc(nm(S.me))}${isM()?' (Manager)':''}</span><button class="btn ghost sm" onclick="sb.auth.signOut()">Sign out</button></div>${V[S.view]()}</main></div>`;
+if(S.view==='duties'&&isM())fq();
+const cb=$('#cb');if(cb)cb.scrollTop=cb.scrollHeight;if(S.view==='chat')markRead()}
+
+// ---- Actions ----
+async function signIn(){const e=$('#le').value.trim();if(!e)return toast('Enter your email first');
+const r=await go(()=>sb.auth.signInWithOtp({email:e,options:{emailRedirectTo:location.origin+location.pathname}}));if(r){S.sent=true;render()}}
+function fq(){const f=$('#df').value;$('#dw').hidden=f!=='weekly';$('#dm').hidden=!['monthly','quarterly'].includes(f);$('#dd').hidden=f!=='once'}
+async function tog(id){const d=S.D.find(x=>x.id===id),k=pk(d),key=id+'|'+k,had=S.C.has(key);
+const r=await go(()=>had?sb.from('duty_completions').delete().eq('duty_id',id).eq('period_key',k):sb.from('duty_completions').insert({duty_id:id,period_key:k,completed_by:S.me.id}));
+if(r){had?S.C.delete(key):S.C.add(key);toast(had?'Moved back to your list':'Nice work. Marked as done');render()}}
+async function addD(){const t=$('#dt').value.trim();if(!t)return toast('Add a name for the duty first');if(!$('#da').value)return toast('Invite a team member first');
+const f=$('#df').value,row={title:t,owner_id:$('#da').value,frequency:f,created_by:S.me.id};
+if(f==='weekly')row.due_weekday=+$('#dw').value;if(f==='monthly'||f==='quarterly')row.due_day=+$('#dm').value;if(f==='once')row.due_date=$('#dd').value;
+const r=await go(()=>sb.from('duties').insert(row).select().single(),'Duty added');if(r&&r.data){S.D.push(r.data);render()}}
+async function patchD(id,p,ok){const r=await go(()=>sb.from('duties').update(p).eq('id',id).select().single(),ok);if(r&&r.data){S.D=S.D.map(d=>d.id===id?r.data:d);render()}}
+const saveSop=id=>{S.open=null;patchD(id,{sop:$('#sp').value},'SOP saved')};
+const reqDel=id=>patchD(id,{delete_requested:true},'Request sent to your manager');
+const keep=id=>patchD(id,{delete_requested:false},'Duty kept');
+async function delD(id){const r=await go(()=>sb.from('duties').delete().eq('id',id),'Duty deleted');if(r){S.D=S.D.filter(d=>d.id!==id);render()}}
+function nav(v){S.view=v;S.open=null;render();if(v==='activity')openAct()}
+async function openAct(){const r=await sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100);S.AL=r.data||[];if(S.view==='activity')render()}
+async function send(){const w=isM()?S.cw:S.me.id,b=$('#cx').value.trim();if(!b||!w)return;
+const r=await go(()=>sb.from('messages').insert({member_id:w,sender_id:S.me.id,body:b}).select().single());
+if(r&&r.data){if(!S.MG.find(m=>m.id===r.data.id))S.MG.push(r.data);render();$('#cx').focus()}}
+function onMsg(p){const m=p.new;if(!m||!m.id)return;const i=S.MG.findIndex(x=>x.id===m.id);i<0?S.MG.push(m):S.MG[i]=m;
+if(S.view==='chat'){const v=$('#cx')&&$('#cx').value;render();if(v&&$('#cx')){$('#cx').value=v;$('#cx').focus()}}
+else if(p.eventType==='INSERT'&&m.sender_id!==S.me.id)toast('New message')}
+async function markRead(){const w=isM()?S.cw:S.me.id;if(!w||!unread(w))return;const t=new Date().toISOString();
+const r=await go(()=>sb.from('messages').update({read_at:t}).eq('member_id',w).neq('sender_id',S.me.id).is('read_at',null));
+if(r){S.MG.forEach(m=>{if(m.member_id===w&&m.sender_id!==S.me.id&&!m.read_at)m.read_at=t});render()}}
+async function addLog(){const x=$('#lx').value.trim(),h=+$('#lh').value;if(!x)return toast('Describe what you worked on');if(!(h>0&&h<=24))return toast('Hours must be between 0.5 and 24');
+const r=await go(()=>sb.from('work_logs').insert({user_id:S.me.id,log_date:$('#ld').value||day(0),hours:h,summary:x}).select().single(),'Added to your log');
+if(r&&r.data){S.LG.unshift(r.data);S.LG.sort((a,b)=>a.log_date<b.log_date?1:-1);render()}}
+async function delLog(id){const r=await go(()=>sb.from('work_logs').delete().eq('id',id),'Entry deleted');if(r){S.LG=S.LG.filter(x=>x.id!==id);render()}}
+async function addF(){const n=$('#fn').value.trim();if(!n)return toast('Name the folder first');
+const r=await go(()=>sb.from('folders').insert({name:n,visible_to_all:$('#fv').checked,created_by:S.me.id}).select().single(),'Folder created');if(r&&r.data){S.F.push(r.data);S.fo=r.data.id;render()}}
+async function visF(id,v){const r=await go(()=>sb.from('folders').update({visible_to_all:v}).eq('id',id).select().single(),'Folder updated');if(r&&r.data){S.F=S.F.map(f=>f.id===id?r.data:f);render()}}
+async function upl(){const fi=$('#up').files[0];if(!fi)return toast('Choose a file first');
+const path=S.fo+'/'+Date.now()+'-'+fi.name.replace(/[^\w.\-]+/g,'_');
+const u=await go(()=>sb.storage.from('library').upload(path,fi));if(!u)return;
+const r=await go(()=>sb.from('files').insert({folder_id:S.fo,name:fi.name,storage_path:path,size_bytes:fi.size,mime_type:fi.type||null,uploaded_by:S.me.id}).select().single(),'File uploaded');
+if(r&&r.data){S.FL.unshift(r.data);render()}else await sb.storage.from('library').remove([path])}
+async function dl(id){const f=S.FL.find(x=>x.id===id);const r=await go(()=>sb.storage.from('library').createSignedUrl(f.storage_path,60,{download:f.name}));
+if(r&&r.data){const a=document.createElement('a');a.href=r.data.signedUrl;a.click()}}
+async function delFile(id){const f=S.FL.find(x=>x.id===id);if(!confirm('Delete "'+f.name+'"?'))return;
+const a=await go(()=>sb.storage.from('library').remove([f.storage_path]));if(!a)return;
+const r=await go(()=>sb.from('files').delete().eq('id',id),'File deleted');if(r){S.FL=S.FL.filter(x=>x.id!==id);render()}}
+async function setF(fid,uid){const f=S.F.find(x=>x.id===fid),cur=lvl(f,uid);let nx=(cur+1)%3;if(f.visible_to_all&&nx===0)nx=1;
+const r=await go(()=>nx===0?sb.from('folder_access').delete().eq('folder_id',fid).eq('user_id',uid):sb.from('folder_access').upsert({folder_id:fid,user_id:uid,can_view:true,can_upload:nx===2},{onConflict:'folder_id,user_id'}),'Access updated');
+if(r){S.FA=S.FA.filter(x=>!(x.folder_id===fid&&x.user_id===uid));if(nx>0)S.FA.push({folder_id:fid,user_id:uid,can_view:true,can_upload:nx===2});render()}}
+async function setP(uid,k,v){const r=await go(()=>sb.from('permissions').upsert({user_id:uid,[k]:v},{onConflict:'user_id'}).select().single(),'Access updated');
+if(r&&r.data){S.PM=S.PM.filter(x=>x.user_id!==uid).concat(r.data);render()}}
+async function openEmp(i){S.ep=i;S.ef='now';S.view='emp';S.act=[];render();
+const r=await sb.from('activity_log').select('*').eq('user_id',i).order('created_at',{ascending:false}).limit(5);S.act=r.data||[];if(S.view==='emp')render()}
+async function setR(p,ok){const e=$('#re'),t=$('#rt');if(e)Object.assign(p,{email:e.value.trim()||null,send_time:t.value||'08:30'});
+const r=await go(()=>sb.from('reminder_settings').update(p).eq('user_id',S.me.id).select().single(),ok);if(r&&r.data){S.R[S.me.id]=r.data;render()}}
+async function tgConnect(){const w=window.open('about:blank','_blank'),t=crypto.randomUUID();
+const r=await go(()=>sb.from('reminder_settings').update({telegram_link_token:t}).eq('user_id',S.me.id));
+if(r&&w)w.location.href=`https://t.me/${CFG.bot}?start=${t}`;else if(w)w.close()}
+
+if(ready){sb.auth.onAuthStateChange(e=>{if(e==='SIGNED_OUT'){S.sent=false;S.ch=null;sb.removeAllChannels()}if(e==='SIGNED_IN'||e==='SIGNED_OUT')load()});load();
+window.addEventListener('focus',()=>{if(S.me&&S.view==='rem')load()})}else render();
+</script></body></html>
